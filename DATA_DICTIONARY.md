@@ -15,7 +15,7 @@ Measured by remote sensing and, where available, surface probe data.
 | `mass` | Estimated mass in kilotonnes. |
 | `density` | Bulk density in g/cm3. Ranges from porous rubble piles (~1.5) to solid metal bodies (~8.0). |
 | `porosity` | Fraction of volume that is void space. High porosity can indicate rubble pile structure. |
-| `spectral_class` | Tholen-derived classification (categorical: `C-type`, `S-type`, `M-type`, `X-type`). Each class has different formation history and mineral composition profiles. |
+| `spectral_class` | Tholen taxonomy classification (categorical: `C-type`, `S-type`, `M-type`, `X-type`). Each class reflects a different parent body differentiation history: C-types are primitive carbonaceous bodies, S-types are silicate-rich from partially differentiated parents, M-types are metallic fragments of differentiated cores, and X-types have ambiguous spectra. |
 | `mineral_signature_iron` | Spectroscopic concentration estimate for iron (Fe), scaled 0-1. |
 | `mineral_signature_nickel` | Spectroscopic concentration estimate for nickel (Ni), scaled 0-1. |
 | `mineral_signature_cobalt` | Spectroscopic concentration estimate for cobalt (Co), scaled 0-1. |
@@ -25,10 +25,10 @@ Measured by remote sensing and, where available, surface probe data.
 | `rotation_period` | Sidereal rotation period in hours. Fast rotators may complicate surface operations. |
 | `surface_roughness` | Terrain roughness index (0=smooth, 1=extremely rough). Affects landing and drill placement. |
 | `magnetic_field_strength` | Measured magnetic field intensity in arbitrary units. Most asteroids have negligible fields. |
-| `thermal_inertia` | Thermal inertia in SI units. Indicates surface heat response characteristics. |
-| `shape_elongation` | Ratio of longest to shortest axis (1.0=spherical, 3.0+=highly elongated). |
+| `thermal_inertia` | Thermal inertia in SI units. Indicates surface heat response characteristics. Extreme values in either direction can affect mining equipment performance. |
+| `shape_elongation` | Ratio of longest to shortest axis (1.0=spherical, 3.0+=highly elongated). Highly elongated bodies may indicate weak internal structure. |
 | `regolith_depth` | Estimated depth of surface regolith layer in meters. Deep regolith can complicate surface anchoring. |
-| `water_ice_fraction` | Detected fraction of water ice (0-1). Many asteroids have zero water ice. |
+| `water_ice_fraction` | Detected fraction of water ice (0-1). Many asteroids have zero water ice. Water ice preservation depends on heliocentric distance and surface exposure. |
 | `volatile_content` | Fraction of volatile compounds detected. Includes ices and trapped gases. |
 | `structural_integrity` | Engineering assessment of structural soundness (0=critically fractured, 1=solid monolith). Low-integrity bodies carry elevated operational risk. |
 | `estimated_volume` | Derived: mass / density. |
@@ -78,18 +78,20 @@ Compiled from prospecting missions. Survey methodology and timing vary.
 | `extraction_difficulty` | Engineering assessment of extraction difficulty (0=trivial, 1=extremely difficult). |
 | `accessibility_score` | How accessible deposits are to current drilling technology (0=inaccessible, 1=fully accessible). |
 | `survey_age_years` | Time since the most recent survey in years. |
-| `data_completeness` | Fraction of standard survey measurements successfully collected (0-1). |
+| `data_completeness` | Fraction of standard survey measurements successfully collected (0-1). Complete data enables better operational planning. |
 | `spectral_resolution` | Resolution quality of the spectroscopic instruments used (0-1). |
 | `ground_truth_samples` | Number of physical samples returned for laboratory analysis. |
 | `estimated_extraction_cost` | Surveyor's estimate of total extraction cost in thousands of credits. |
 | `drilling_feasibility` | Engineering assessment of drilling viability (0=infeasible, 1=ideal). |
-| `equipment_compatibility` | Compatibility score with standard mining equipment (0-1). |
+| `equipment_compatibility` | Compatibility score with standard mining equipment (0-1). Low compatibility can significantly impact operational recovery rates. |
 | `estimated_yield_tonnes` | Surveyor's estimate of extractable material in tonnes. |
 | `survey_anomaly_flag` | Binary flag. Set to 1 if the survey team flagged unusual readings. |
 | `previous_claim_history` | Number of times this asteroid has been previously claimed and abandoned. |
 | `legal_encumbrance_score` | Degree of legal complications (0=clear, higher=more encumbered). |
 | `environmental_hazard_rating` | Environmental risk assessment (0=benign, 1=severe). |
 | `insurance_risk_class` | Insurance underwriter risk classification (integer, 1=lowest risk, 5=highest risk). |
+| `extraction_delay` | Estimated extraction timeline in rounds. Varies by asteroid characteristics — difficulty, belt region, accessibility, and mass all affect how long operations take. |
+| `extraction_yield` | Estimated operational recovery factor (0-1+). Represents what fraction of the mineral value is expected to be actually recovered during extraction. Depends on operational conditions — equipment fit, survey quality, surface environment, and gravity. Values above 1.0 indicate better-than-expected recovery. |
 
 ---
 
@@ -155,11 +157,12 @@ External valuations and indices from commercial and public sources. These are pr
 
 ---
 
-## Target Variable
+## Target Variables
 
 | Feature | Description |
 |---------|-------------|
-| `true_value` | *Training data only.* Realized extraction value in thousands of credits after all operations concluded. Negative values indicate a net loss. This column is not available during competition. |
+| `mineral_value` | *Training data only.* The total mineral content value of the asteroid — what's in the rock before extraction operations. This is the theoretical ceiling. Not available during competition. |
+| `recovered_value` | *Training data only.* The actual revenue received after extraction: `mineral_value × extraction_yield`. This is what the winner takes home (before subtracting their bid). Negative values indicate a net loss. Not available during competition. |
 
 ---
 

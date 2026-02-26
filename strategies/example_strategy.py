@@ -7,8 +7,8 @@ conservative discounting. Should perform respectably but not dominate.
 STRATEGY_NAME = "Steady Eddie"
 
 
-def price_asteroid(features: dict, capital: float, round_info: dict) -> float:
-    """Conservative heuristic strategy."""
+def _evaluate_single(features: dict, budget: float, round_info: dict) -> float:
+    """Evaluate a single asteroid and return bid amount."""
     # Skip if low confidence — data is unreliable
     confidence = features.get("survey_confidence", 0.5)
     if confidence < 0.35:
@@ -65,25 +65,41 @@ def price_asteroid(features: dict, capital: float, round_info: dict) -> float:
     # Discount for winner's curse — bid well below estimated value
     bid = estimated_value * 0.55
 
-    # Liquidity management: keep enough liquid capital as a buffer
-    # Account for pending extractions tying up cash flow
+    # Liquidity management
     pending = round_info.get("pending_revenue", 0.0)
     num_pending = round_info.get("num_pending_extractions", 0)
     rounds_left = round_info.get("total_rounds", 50) - round_info.get("round_number", 1)
 
-    # Be more conservative when lots of capital is locked up
     if num_pending > 3:
         bid *= 0.8
-    # Be more aggressive near end when pending revenue will settle
-    if rounds_left < 5 and pending > capital * 0.5:
+    if rounds_left < 5 and pending > budget * 0.5:
         bid *= 1.2
 
-    # Don't bid more than 10% of capital
-    max_bid = capital * 0.10
+    # Don't bid more than 10% of remaining budget
+    max_bid = budget * 0.10
     bid = min(bid, max_bid)
 
-    # Skip if too small to be worth the catastrophe risk
     if bid < 20:
         return 0.0
 
     return bid
+
+
+def price_asteroids(asteroids: list[dict], capital: float, round_info: dict) -> list[float]:
+    """Batch bidding: evaluate each asteroid with simple sequential budget tracking.
+
+    Args:
+        asteroids: list of feature dicts, one per asteroid offered this round
+        capital: your current liquid capital
+        round_info: round metadata (see SUBMISSION_GUIDE.md for details)
+
+    Returns:
+        list of bid amounts (same length as asteroids). 0 to pass.
+    """
+    bids = []
+    budget_remaining = capital
+    for features in asteroids:
+        bid = _evaluate_single(features, budget_remaining, round_info)
+        bids.append(bid)
+        budget_remaining -= bid
+    return bids

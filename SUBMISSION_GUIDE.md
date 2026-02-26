@@ -9,11 +9,12 @@ Create a single Python file with your strategy:
 
 STRATEGY_NAME = "Your Corp Name"  # Optional — defaults to filename
 
-def price_asteroid(features: dict, capital: float, round_info: dict) -> float:
+def price_asteroids(asteroids: list[dict], capital: float, round_info: dict) -> list[float]:
     """
     Args:
-        features: dict of ~95 values describing the asteroid (mostly float,
-                  some categorical strings like spectral_class, belt_region, probe_type)
+        asteroids: list of feature dicts (~95 values each, mostly float,
+                   some categorical strings like spectral_class, belt_region, probe_type).
+                   Each dict also includes 'extraction_delay' (int).
         capital: your current liquid capital (what you can bid with right now)
         round_info: dict with keys:
             - round_number: current round (1-indexed)
@@ -22,45 +23,84 @@ def price_asteroid(features: dict, capital: float, round_info: dict) -> float:
             - economic_cycle_phase: "bust", "normal", or "boom"
             - asteroids_this_round: number of asteroids this round
             - risk_free_rate: per-round interest rate on liquid capital
-            - extraction_delay: rounds until extraction revenue arrives
+            - extraction_delay_base: sector minimum extraction delay in rounds
+            - num_active_competitors: number of non-bankrupt competitors
             - pending_revenue: your total expected revenue from in-progress extractions
             - num_pending_extractions: number of your extractions still in progress
+            - previous_round: list of per-asteroid results from last round (None for round 1)
+                Each entry: {winning_bid, was_sold, was_catastrophe, you_won}
+            - market_history: cumulative market stats (None for round 1)
+                Keys: rounds_completed, cumulative_asteroids_offered,
+                      cumulative_asteroids_sold, cumulative_catastrophes,
+                      avg_winning_bid_last5, your_total_wins, your_total_spending
 
     Returns:
-        Your bid amount as a float. Return 0 to pass on this asteroid.
+        List of bid amounts (same length as asteroids). Return 0 to pass on an asteroid.
+        If total bids exceed capital, all bids are scaled down proportionally.
     """
-    return 0.0
+    return [0.0] * len(asteroids)
 ```
+
+## Portfolio Bidding
+
+You see all asteroids in a round at once and submit bids on the entire batch simultaneously. This means you can:
+- Compare asteroids against each other and bid on the most attractive ones
+- Allocate your capital budget across the batch
+- Consider how many asteroids you want to win in a single round
+
+If the sum of your non-zero bids exceeds your available capital, all bids are scaled down proportionally to fit within your budget.
+
+## Extraction Delay
+
+Each asteroid has a variable `extraction_delay` (included in its features). This is how many rounds until extraction revenue arrives after you win. It depends on the asteroid's characteristics — difficulty, belt region, accessibility, and mass.
+
+The sector minimum is given in `round_info["extraction_delay_base"]`, but actual delays can be higher. Smart strategies will factor delay into their bid: an asteroid worth $500 arriving in 3 rounds is more valuable than the same asteroid arriving in 9 rounds.
+
+## Market Intelligence
+
+Starting from round 2, `round_info` includes:
+
+- **`previous_round`**: A list with one entry per asteroid from last round. Each entry tells you the winning bid (or None if unsold), whether a catastrophe occurred, and whether you won it. Use this to gauge competitor aggressiveness.
+
+- **`market_history`**: Cumulative stats including total asteroids sold, catastrophes observed, recent average winning bids, and your own win/spending totals.
 
 ## Test Your Strategy
 
-Use the training data (`data/training.csv`) to develop and validate your model. The training data includes `true_value` for each asteroid — this column will not be available during competition.
+Use the training data (`data/training.csv`) to develop and validate your model. The training data includes `mineral_value`, `extraction_yield`, and `recovered_value` for each asteroid — these target columns will not be available during competition. The `extraction_delay` and `extraction_yield` features ARE available during competition.
 
-You can test your `price_asteroid` function by calling it with rows from the training data:
+You can test your `price_asteroids` function by calling it with rows from the training data:
 
 ```python
 import pandas as pd
 
 df = pd.read_csv("data/training.csv")
 
-# Convert a row to the features dict your function will receive
-row = df.iloc[0]
-features = row.drop("true_value").to_dict()
-features.pop("asteroid_id", None)
+# Build a batch of asteroid feature dicts (drop target columns)
+batch = []
+for _, row in df.head(10).iterrows():
+    features = row.drop(["mineral_value", "recovered_value"]).to_dict()
+    features.pop("asteroid_id", None)
+    batch.append(features)
 
 # Simulate a call
-bid = price_asteroid(features, capital=10000.0, round_info={
+bids = price_asteroids(batch, capital=10000.0, round_info={
     "round_number": 1,
     "total_rounds": 50,
     "sector_name": "Outer Rim",
     "economic_cycle_phase": "bust",
     "asteroids_this_round": 10,
     "risk_free_rate": 0.002,
-    "extraction_delay": 3,
+    "extraction_delay_base": 3,
+    "num_active_competitors": 5,
     "pending_revenue": 0.0,
     "num_pending_extractions": 0,
+    "previous_round": None,
+    "market_history": None,
 })
-print(f"Bid: {bid:.2f}, True value: {row['true_value']:.2f}")
+
+for i, bid in enumerate(bids):
+    recovered = df.iloc[i]["recovered_value"]
+    print(f"Asteroid {i}: bid={bid:.2f}, recovered_value={recovered:.2f}")
 ```
 
 ## Submit
@@ -71,13 +111,13 @@ Submit your strategy file to the organizer. Details will be provided separately.
 
 1. **One file per team.** Your entire strategy must be in a single `.py` file.
 2. **No network access.** Strategies run in a sandbox. No HTTP calls, no sockets.
-3. **2-second timeout.** Your function must return within 2 seconds per asteroid.
+3. **2-second timeout.** Your function must return within 2 seconds per round (all asteroids).
 4. **No filesystem access.** Don't read/write files during competition.
 5. **Standard library + numpy/pandas allowed.** Other imports may not be available in the competition environment.
 
 ## What You Have
 
-- **Training data**: `data/training.csv` with ~95 features + true values for 10,000 asteroids
+- **Training data**: `data/training.csv` with ~95 features + `extraction_delay` + true values for 10,000 asteroids
 - **Feature reference**: `DATA_DICTIONARY.md` with descriptions of every feature
 - **Example strategy**: `strategies/example_strategy.py` — a simple heuristic bidder
 
