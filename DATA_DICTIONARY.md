@@ -1,6 +1,6 @@
 # Data Dictionary
 
-Feature reference for the Asteroid Mining Bidding Simulation training dataset. Each row represents one asteroid. The `true_value` column (provided in training data only) represents the realized extraction value in thousands of credits after all operations concluded.
+Feature reference for the Asteroid Auction Challenge training dataset. Each row represents one asteroid with ~95 measurement features and four target variables available only in training data (`mineral_value`, `extraction_yield`, `extraction_delay`, `recovered_value`).
 
 Market conditions and data collection methods may differ between the training dataset and live competition sectors.
 
@@ -14,7 +14,7 @@ Measured by remote sensing and, where available, surface probe data.
 |---------|-------------|
 | `mass` | Estimated mass in kilotonnes. |
 | `density` | Bulk density in g/cm3. Ranges from porous rubble piles (~1.5) to solid metal bodies (~8.0). |
-| `porosity` | Fraction of volume that is void space. High porosity can indicate rubble pile structure. |
+| `porosity` | Fraction of volume that is void space. High porosity combined with low density may indicate rubble pile structure. |
 | `spectral_class` | Tholen taxonomy classification (categorical: `C-type`, `S-type`, `M-type`, `X-type`). Each class reflects a different parent body differentiation history: C-types are primitive carbonaceous bodies, S-types are silicate-rich from partially differentiated parents, M-types are metallic fragments of differentiated cores, and X-types have ambiguous spectra. |
 | `mineral_signature_iron` | Spectroscopic concentration estimate for iron (Fe), scaled 0-1. |
 | `mineral_signature_nickel` | Spectroscopic concentration estimate for nickel (Ni), scaled 0-1. |
@@ -27,7 +27,7 @@ Measured by remote sensing and, where available, surface probe data.
 | `magnetic_field_strength` | Measured magnetic field intensity in arbitrary units. Most asteroids have negligible fields. |
 | `thermal_inertia` | Thermal inertia in SI units. Indicates surface heat response characteristics. Extreme values in either direction can affect mining equipment performance. |
 | `shape_elongation` | Ratio of longest to shortest axis (1.0=spherical, 3.0+=highly elongated). Highly elongated bodies may indicate weak internal structure. |
-| `regolith_depth` | Estimated depth of surface regolith layer in meters. Deep regolith can complicate surface anchoring. |
+| `regolith_depth` | Estimated depth of surface regolith layer in meters. Deep regolith can complicate surface anchoring and extraction operations. |
 | `water_ice_fraction` | Detected fraction of water ice (0-1). Many asteroids have zero water ice. Water ice preservation depends on heliocentric distance and surface exposure. |
 | `volatile_content` | Fraction of volatile compounds detected. Includes ices and trapped gases. |
 | `structural_integrity` | Engineering assessment of structural soundness (0=critically fractured, 1=solid monolith). Low-integrity bodies carry elevated operational risk. |
@@ -61,6 +61,7 @@ Derived from ephemeris data and belt surveys.
 | `communication_delay` | One-way light-time communication delay in minutes. |
 | `orbital_stability_score` | Long-term orbital stability assessment (0=unstable, 1=highly stable). |
 | `conjunction_frequency` | Rate of close approaches with other bodies (scaled). |
+| `lucky_number` | Numerological favorability score (0-10) derived from orbital resonance patterns, per the Ceres Institute for Astroprospecting (2246). |
 
 ---
 
@@ -90,8 +91,8 @@ Compiled from prospecting missions. Survey methodology and timing vary.
 | `legal_encumbrance_score` | Degree of legal complications (0=clear, higher=more encumbered). |
 | `environmental_hazard_rating` | Environmental risk assessment (0=benign, 1=severe). |
 | `insurance_risk_class` | Insurance underwriter risk classification (integer, 1=lowest risk, 5=highest risk). |
-| `extraction_delay` | Estimated extraction timeline in rounds. Varies by asteroid characteristics — difficulty, belt region, accessibility, and mass all affect how long operations take. |
-| `extraction_yield` | Estimated operational recovery factor (0-1+). Represents what fraction of the mineral value is expected to be actually recovered during extraction. Depends on operational conditions — equipment fit, survey quality, surface environment, and gravity. Values above 1.0 indicate better-than-expected recovery. |
+| `ai_valuation_estimate` | Automated valuation from the ValuCorp v2.3 pricing model, trained on historical auction data. Released 2246; not yet validated over a full market cycle. |
+| `analyst_consensus_estimate` | Median valuation from a panel of 8 independent mining analysts. |
 
 ---
 
@@ -121,6 +122,8 @@ Snapshot of market conditions at the time of auction. Prices reflect current spo
 | `regulatory_burden_score` | Regulatory overhead for operations in this jurisdiction. |
 | `supply_chain_disruption_risk` | Assessed risk of supply chain disruptions. |
 | `technology_readiness_level` | Technology readiness level of available equipment (scale 5-9). |
+| `media_hype_score` | Composite media attention index from mining industry newswires (0-10+). Reflects public and media interest in the claim. |
+| `social_sentiment_score` | Aggregated sentiment from mining industry social feeds. Normalized to zero mean. |
 
 ---
 
@@ -143,26 +146,16 @@ Local space environment near the asteroid.
 
 ---
 
-## Third-Party Estimates
-
-External valuations and indices from commercial and public sources. These are provided as-is and reflect the methodology and assumptions of their respective providers.
-
-| Feature | Description |
-|---------|-------------|
-| `ai_valuation_estimate` | Automated valuation from the ValuCorp v2.3 pricing model, trained on historical auction data. Released 2246; not yet validated over a full market cycle. |
-| `media_hype_score` | Composite media attention index from mining industry newswires (0-10+). Reflects public and media interest in the claim. |
-| `analyst_consensus_estimate` | Median valuation from a panel of 8 independent mining analysts. |
-| `lucky_number` | Numerological favorability score (0-10) derived from orbital resonance patterns, per the Ceres Institute for Astroprospecting (2246). |
-| `social_sentiment_score` | Aggregated sentiment from mining industry social feeds. Normalized to zero mean. |
-
----
-
 ## Target Variables
 
+Available in training data only. Not available during competition.
+
 | Feature | Description |
 |---------|-------------|
-| `mineral_value` | *Training data only.* The total mineral content value of the asteroid — what's in the rock before extraction operations. This is the theoretical ceiling. Not available during competition. |
-| `recovered_value` | *Training data only.* The actual revenue received after extraction: `mineral_value × extraction_yield`. This is what the winner takes home (before subtracting their bid). Negative values indicate a net loss. Not available during competition. |
+| `mineral_value` | The total mineral content value of the asteroid — what's in the rock before extraction operations. This is the theoretical ceiling. |
+| `extraction_yield` | Operational recovery factor (0-1+). What fraction of the mineral value is actually recovered during extraction. Depends on operational conditions — equipment fit, survey quality, surface environment, and gravity. Values above 1.0 indicate better-than-expected recovery. |
+| `extraction_delay` | Extraction timeline in rounds. How many rounds until extraction revenue arrives after winning. Varies by asteroid characteristics — difficulty, belt region, accessibility, and mass all affect how long operations take. |
+| `recovered_value` | The actual revenue received after extraction: `mineral_value × extraction_yield`. This is what the winner takes home (before subtracting their bid). Negative values indicate a net loss. |
 
 ---
 

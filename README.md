@@ -54,7 +54,6 @@ The `round_info` dict contains:
 | `economic_cycle_phase` | `"bust"`, `"normal"`, or `"boom"` |
 | `asteroids_this_round` | Number of asteroids offered this round |
 | `risk_free_rate` | Per-round interest rate on liquid capital |
-| `extraction_delay_base` | Minimum extraction delay for this sector (actual delay varies per asteroid) |
 | `num_active_competitors` | Number of non-bankrupt competitors |
 | `pending_revenue` | Total revenue you expect from in-progress extractions |
 | `num_pending_extractions` | Number of extractions still in progress |
@@ -92,8 +91,8 @@ A fraction of asteroids will trigger catastrophic events when mined. The rate is
 Winning multiple asteroids in the same cluster increases both the probability of catastrophe and your exposure to cascade events.
 
 ### Extraction Operations
-- **Extraction yield**: Not all mineral value is recovered during operations. The `extraction_yield` feature indicates what fraction of the mineral value you'll actually receive as revenue. Operational conditions — equipment compatibility, survey data quality, surface environment — all affect recovery rates.
-- **Extraction delay**: When you win, your bid is paid immediately. Revenue arrives after a variable delay that depends on the asteroid's characteristics (difficulty, location, accessibility, size). Each asteroid's `extraction_delay` is included as a feature.
+- **Extraction yield**: Not all mineral value is recovered during operations. Operational conditions — equipment compatibility, survey data quality, surface environment — all affect recovery rates. Your revenue from an asteroid is `mineral_value × extraction_yield`. The training data includes `extraction_yield` for each asteroid so you can learn what drives it.
+- **Extraction delay**: When you win, your bid is paid immediately. Revenue arrives after a variable delay that depends on the asteroid's characteristics (difficulty, location, accessibility, size). The training data includes `extraction_delay` for each asteroid.
 - **Interest**: Liquid capital earns a per-round return (given in `round_info`).
 - **Bankruptcy**: If your capital hits zero, you're eliminated. No coming back.
 
@@ -114,12 +113,12 @@ Each sector resets capital. Economic conditions change between sectors.
 ## Getting Started
 
 ### What You Have
-- `data/training.csv` — 10,000 asteroids with ~95 features and realized extraction values
+- `data/training.csv` — 10,000 asteroids with ~95 features and target values
 - `DATA_DICTIONARY.md` — description of every feature
 - `strategies/example_strategy.py` — a simple baseline bidder to study
 
 ### Build Your Model
-Load the training data and explore. The `true_value` column is the realized extraction outcome for each asteroid. Your goal is to estimate this from the available features, then bid profitably.
+Load the training data and explore. The training data includes target variables not available during competition: `mineral_value` (what's in the rock), `extraction_yield` (recovery fraction), `extraction_delay` (rounds until revenue), and `recovered_value` (what the winner actually receives: `mineral_value × extraction_yield`). Your goal is to estimate what asteroids are worth and how long extraction will take, then bid profitably.
 
 ```python
 import pandas as pd
